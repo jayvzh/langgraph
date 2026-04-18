@@ -1,0 +1,26 @@
+[project]
+name = "learning-agent"
+version = "0.1.0"
+description = "Personal learning agent based on LangGraph"
+requires-python = ">=3.12"
+authors = [
+    { name = "Your Name" }
+]
+dependencies = [
+    "langgraph>=0.2.0",
+    "langchain>=0.3.0",
+    "langchain-openai>=0.2.0",
+    "python-dotenv>=1.0.0",
+    "python-docx>=1.1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "black>=24.0.0",
+    "ruff>=0.3.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
