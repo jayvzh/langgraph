@@ -1,5 +1,59 @@
 # Changelog
 
+## [0.4.2] - 2026-04-19
+
+### Changed
+
+- README.md 模型推荐部分重写：
+  - 强模型更新为 gpt-5.4、deepseek-chat、qwen-plus
+  - 快速模型推荐改为本地 Ollama 模型：deepseek-r1:8b、qwen3:8b、gemma3:4b
+  - 新增 deepseek-r1:8b 能力评估和模型选择建议
+  - 新增其他本地模型简评（gpt-oss、qwen3-vl、minimax-m2）
+  - 删除过时的 gpt-4o、gpt-4o-mini、gpt-3.5-turbo 推荐
+- README.md 配置示例更新：
+  - 示例1-3 强模型统一改为 gpt-5.4
+  - 示例2-3 快速模型改为 deepseek-r1:8b + Ollama 配置
+
+## [0.4.1] - 2026-04-19
+
+### Added
+
+- `OPENAI_FAST_API_BASE` 环境变量：为快速模型单独配置 API 基础 URL
+- `OPENAI_FAST_API_KEY` 环境变量：为快速模型单独配置 API 密钥
+- 支持"强模型云端 + 快速模型本地 Ollama"的混合配置模式
+
+### Changed
+
+- `get_llm()` 函数：支持为强模型和快速模型分别指定 API URL 和 API Key
+- 快速模型配置优先级：`OPENAI_FAST_API_BASE` > `OPENAI_API_BASE`，`OPENAI_FAST_API_KEY` > `OPENAI_API_KEY`
+- README.md：更新 Ollama 配置示例，使用独立的快速模型 API 配置
+- .env.example：添加 `OPENAI_FAST_API_BASE` 和 `OPENAI_FAST_API_KEY` 配置项及注释
+
+## [0.4.0] - 2026-04-19
+
+### Added
+
+- `subsubdomain` 字段：目录结构从3级升级为4级 `domain/subdomain/subsubdomain/type/topic.md`
+- initial_analysis_node prompt 新增子领域枚举参考和目录结构示例
+- subdomain 约束为2-6字标准化短词，subsubdomain 约束为2-8字细分类
+- topic 约束为6-15字具体主题名，足以区分同类文档
+- README.md 完整重写：新增模型分配策略表、模型推荐表、Ollama本地模型配置说明、4个配置示例
+- .env.example 完整重写：添加详细中文注释说明每个配置项的用途和推荐值
+
+### Changed
+
+- 目录生成逻辑：`domain/subdomain/type/` → `domain/subdomain/subsubdomain/type/`
+- knowledge_matching_node 匹配查询加入 subdomain 和 subsubdomain
+- log_generation_node 领域显示加入 subsubdomain
+- note_generation_node 传入 subsubdomain 参数
+
+### Tested
+
+- 使用 TikTok 课程文档测试，生成路径：`跨境电商/TikTok/美区运营/教程/TikTok美区入场全流程.md`
+- 验证4级目录结构正确
+- 验证笔记格式完整
+- 验证日志格式正确
+
 ## [0.3.0] - 2026-04-19
 
 ### Added

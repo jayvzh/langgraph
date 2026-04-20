@@ -6,6 +6,7 @@ class LearningState(TypedDict):
     source_file: str
     domain: str
     subdomain: str
+    subsubdomain: str
     type: str
     topic: str
     summary: str

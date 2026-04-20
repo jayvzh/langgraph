@@ -14,9 +14,21 @@ def get_llm(strong: bool = False) -> ChatOpenAI:
     dual_enabled = os.getenv("DUAL_MODEL_ENABLED", "false").lower() == "true"
     if strong or not dual_enabled:
         model = os.getenv("OPENAI_MODEL", "gpt-4")
+        api_base = os.getenv("OPENAI_API_BASE", "https://api.openai.com/v1")
+        api_key = os.getenv("OPENAI_API_KEY")
     else:
         model = os.getenv("OPENAI_FAST_MODEL", "gpt-4o-mini")
-    return ChatOpenAI(model=model, temperature=0.7)
+        api_base = os.getenv("OPENAI_FAST_API_BASE") or os.getenv("OPENAI_API_BASE", "https://api.openai.com/v1")
+        api_key = os.getenv("OPENAI_FAST_API_KEY") or os.getenv("OPENAI_API_KEY")
+    
+    kwargs = {
+        "model": model,
+        "temperature": 0.7,
+        "base_url": api_base,
+    }
+    if api_key:
+        kwargs["api_key"] = api_key
+    return ChatOpenAI(**kwargs)
 
 
 def extract_text_content(result) -> str:
@@ -54,22 +66,36 @@ def initial_analysis_node(state: Dict) -> Dict:
                 "system",
                 """你是一个学习内容分析专家。分析输入文本，输出结构化JSON。
 
-领域枚举：跨境电商, AI工具, 自动化, 流量增长, 商业模式
+领域枚举及对应子领域参考：
+- 跨境电商：TikTok, 亚马逊, 独立站, 选品, 履约物流, 支付结算
+- AI工具：Agent, LLM, RAG, 提示工程, 自动化工具, AI编程
+- 自动化：工作流, 脚本, 无代码, RPA, 数据管道
+- 流量增长：短视频, SEO, 社交媒体, 付费投放, 内容营销
+- 商业模式：SaaS, 电商, 订阅, 平台, 自由职业
+
 类型枚举：方法论, 教程, 工具, 行业认知
 
 规则：
 - 课程/卖课内容 → bias_risk 设为"高"
 - AI生成的摘要 → credibility 下降一级
 - 有实操步骤/数据支撑 → credibility 设为"高"
-- topic 必须去除品牌词，标准化为通用概念
+- subdomain 必须是2-6字的标准化短词（如TikTok、选品、Agent），不能是描述性短语
+- subsubdomain 是更细粒度的分类（如美区运营、数据驱动、架构设计），2-8字
+- topic 必须足够具体以区分同类文档（6-15字），如"TikTok美区增长框架"而非仅"增长框架"
 - summary 压缩至原文 ≤20%，保留核心信息
+
+目录结构示例：
+跨境电商/TikTok/美区运营/方法论/TikTok美区增长框架.md
+AI工具/Agent/架构设计/系统/学习型Agent架构设计.md
+跨境电商/选品/数据驱动/策略/数据驱动选品方法论.md
 
 输出JSON格式：
 {{
   "domain": "从枚举中选择",
-  "subdomain": "具体子领域",
+  "subdomain": "标准化短词子领域",
+  "subsubdomain": "细粒度分类",
   "type": "从枚举中选择",
-  "topic": "标准化主题（去品牌词）",
+  "topic": "具体主题名（6-15字，足以区分同类文档）",
   "source": {{
     "source_name": "来源名称",
     "source_type": "来源类型（课程/文章/视频/报告等）",
@@ -96,6 +122,7 @@ def initial_analysis_node(state: Dict) -> Dict:
     return {
         "domain": parsed.get("domain", ""),
         "subdomain": parsed.get("subdomain", ""),
+        "subsubdomain": parsed.get("subsubdomain", ""),
         "type": parsed.get("type", ""),
         "topic": parsed.get("topic", ""),
         "source": parsed.get("source", {}),
@@ -222,7 +249,9 @@ def knowledge_matching_node(state: Dict) -> Dict:
 
     topic = state.get("topic", "")
     domain = state.get("domain", "")
-    query = f"{domain} {topic}".strip().lower()
+    subdomain = state.get("subdomain", "")
+    subsubdomain = state.get("subsubdomain", "")
+    query = f"{domain} {subdomain} {subsubdomain} {topic}".strip().lower()
 
     best_match = ""
     best_score = 0.0
@@ -300,7 +329,7 @@ def note_generation_node(state: Dict) -> Dict:
             ),
             (
                 "human",
-                "领域：{domain}\n子领域：{subdomain}\n类型：{type}\n主题：{topic}\n来源信息：{source}\n结构化知识：{structured}\n价值评估：{evaluation}",
+                "领域：{domain}\n子领域：{subdomain}\n细分类：{subsubdomain}\n类型：{type}\n主题：{topic}\n来源信息：{source}\n结构化知识：{structured}\n价值评估：{evaluation}",
             ),
         ]
     )
@@ -309,6 +338,7 @@ def note_generation_node(state: Dict) -> Dict:
         {
             "domain": state["domain"],
             "subdomain": state["subdomain"],
+            "subsubdomain": state["subsubdomain"],
             "type": state["type"],
             "topic": state["topic"],
             "source": json.dumps(state["source"], ensure_ascii=False),
@@ -331,11 +361,12 @@ def note_generation_node(state: Dict) -> Dict:
 
     domain = state["domain"]
     subdomain = state["subdomain"]
+    subsubdomain = state["subsubdomain"]
     type_ = state["type"]
     topic = state["topic"]
 
     safe_topic = re.sub(r'[<>:"/\\|?*]', "_", topic)
-    path = f"{domain}/{subdomain}/{type_}"
+    path = f"{domain}/{subdomain}/{subsubdomain}/{type_}"
     filename = f"{safe_topic}.md"
 
     return {
@@ -412,7 +443,7 @@ def log_generation_node(state: Dict) -> Dict:
 
 时间：{timestamp}
 来源文件：{state["source_file"]}
-领域：{state["domain"]}/{state["subdomain"]}
+领域：{state["domain"]}/{state["subdomain"]}/{state["subsubdomain"]}
 主题：{state["topic"]}
 
 匹配情况：{match_info}

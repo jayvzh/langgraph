@@ -53,6 +53,7 @@ def run_learning_agent(docx_path: str) -> dict:
         "source_file": Path(docx_path).name,
         "domain": "",
         "subdomain": "",
+        "subsubdomain": "",
         "type": "",
         "topic": "",
         "summary": "",
